@@ -1,0 +1,7 @@
+.*
+*~
+*.o
+*.a
+*.so
+patcher/patcher
+runtime/runtime.a
