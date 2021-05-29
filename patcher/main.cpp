@@ -12,7 +12,7 @@
 #include <queue>
 
 #define PAGESIZE 4096
-#define N 7
+#define N 5
 using namespace std;
 
 unsigned char *elf_read_section(unsigned char *elf, const char *name, unsigned long *addr, size_t *len)
@@ -237,6 +237,18 @@ static void disasm(unsigned char *data, size_t len, unsigned long vaddr, set<ins
 	}
 }
 
+instr_info fix_nop(unsigned char *data, instr_info n)
+{
+	if (n.length > 2) {
+		data[n.offset] = 0xeb;
+		data[n.offset + 1] = n.length - 2;
+	}
+	n.addr += 2;
+	n.offset += 2;
+	n.length -= 2;
+	return n;
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 3)
@@ -268,7 +280,7 @@ int main(int argc, char **argv)
 	for (auto &i : instrs) {
 		if (i.is_syscall) {
 			if (nop.addr != 0) {
-				nopq.push(nop);
+				nopq.push(fix_nop(data, nop));
 				nop.addr = 0;
 			}
 			if (i.prev_room < 3)
@@ -291,7 +303,7 @@ int main(int argc, char **argv)
 				if (nop.addr + nop.length == i.addr) {
 					nop.length += i.length;
 				} else {
-					nopq.push(nop);
+					nopq.push(fix_nop(data, nop));
 					nop.addr = 0;
 				}
 			}
@@ -299,7 +311,7 @@ int main(int argc, char **argv)
 	}
 
 	if (nop.addr != 0)
-		nopq.push(nop);
+		nopq.push(fix_nop(data, nop));
 
 	int c = 0;
 	while (!sysq.empty()) {
@@ -329,13 +341,10 @@ int main(int argc, char **argv)
 					emit_hook(patch, comm_addr);
 
 					data[k.offset] = 0xeb;
-					data[k.offset + 1] = (j.addr + 2) - (k.addr + 2);
-
-					data[j.offset] = 0xeb;
-					data[j.offset + 1] = 5;
+					data[k.offset + 1] = (j.addr) - (k.addr + 2);
 
 					emit_patch(patch, patch_offset, k.addr + 2,
-						   data, j.offset + 2, j.length - 2, j.addr + 2,
+						   data, j.offset, j.length, j.addr,
 						   reloc1, reloc2);
 
 					found = true;
@@ -356,13 +365,10 @@ int main(int argc, char **argv)
 					emit_hook(patch, comm_addr);
 
 					data[k.offset] = 0xeb;
-					data[k.offset + 1] = (j.addr + 2) - (k.addr + 2);
-
-					data[j.offset] = 0xeb;
-					data[j.offset + 1] = 5;
+					data[k.offset + 1] = (j.addr) - (k.addr + 2);
 
 					emit_patch(patch, patch_offset, k.addr + 2,
-						   data, j.offset + 2, j.length - 2, j.addr + 2,
+						   data, j.offset, j.length, j.addr,
 						   reloc1, reloc2);
 					found = true;
 				}
