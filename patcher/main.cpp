@@ -242,6 +242,8 @@ instr_info fix_nop(unsigned char *data, instr_info n)
 	if (n.length > 2) {
 		data[n.offset] = 0xeb;
 		data[n.offset + 1] = n.length - 2;
+		for (int i = 0; i < n.length - 2; i++)
+			data[n.offset + 2 + i] = 0x90;
 	}
 	n.addr += 2;
 	n.offset += 2;
@@ -304,7 +306,7 @@ int main(int argc, char **argv)
 					nop.length += i.length;
 				} else {
 					nopq.push(fix_nop(data, nop));
-					nop.addr = 0;
+					nop = i;
 				}
 			}
 		}
