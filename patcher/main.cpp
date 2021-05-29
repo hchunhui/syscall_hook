@@ -318,6 +318,8 @@ int main(int argc, char **argv)
 			if (j.addr < k.addr) {
 				if (j.length > N) {
 					nopq.front().length -= N;
+					nopq.front().addr += N;
+					nopq.front().offset += N;
 				} else {
 					nopq.pop();
 				}
@@ -344,6 +346,8 @@ int main(int argc, char **argv)
 					printf("patch + %08lX\n", k.addr);
 					if (j.length > N) {
 						nopq.front().length -= N;
+						nopq.front().addr += N;
+						nopq.front().offset += N;
 					} else {
 						nopq.pop();
 					}
