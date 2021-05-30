@@ -199,6 +199,59 @@ bool operator<(const instr_info &a, const instr_info &b)
 	return a.addr < b.addr;
 }
 
+static void rewrite(unsigned char *data, size_t len, unsigned long vaddr)
+{
+	ZydisDecoder decoder;
+	ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
+
+	int state = 0;
+
+	size_t offset = 0;
+	ZydisDecodedInstruction instr;
+	while (ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder, data + offset, len - offset,
+						     &instr)))
+	{
+		if (instr.mnemonic == ZYDIS_MNEMONIC_MOV &&
+		    data[offset] == 0xb8 &&
+		    instr.length == 5) {
+			state = 1;
+		} else {
+			if (state == 1 &&
+			    instr.mnemonic == ZYDIS_MNEMONIC_LEA &&
+			    instr.length == 7 &&
+			    data[offset] == 0x48 &&
+			    data[offset + 1] == 0x8d &&
+			    (data[offset + 2] == 0x3d || data[offset + 2] == 0xba)) {
+				state = 2;
+			} else if (state == 2 &&
+				   instr.mnemonic == ZYDIS_MNEMONIC_SYSCALL) {
+				unsigned char temp[5];
+				memcpy(temp, data + offset - 7 - 5, 5);
+
+				int d = data[offset - 4] & 0xff;
+				d |= (data[offset - 3] & 0xff) << 8;
+				d |= (data[offset - 2] & 0xff) << 16;
+				d |= (data[offset - 1] & 0xff) << 24;
+				if (data[offset - 5] == 0x3d) {
+					d += 5;
+				}
+				data[offset - 7 - 5] = data[offset - 7];
+				data[offset - 6 - 5] = data[offset - 6];
+				data[offset - 5 - 5] = data[offset - 5];
+				data[offset - 4 - 5] = (d >> 0) & 0xff;
+				data[offset - 3 - 5] = (d >> 8) & 0xff;
+				data[offset - 2 - 5] = (d >> 16) & 0xff;
+				data[offset - 1 - 5] = (d >> 24) & 0xff;
+				memcpy(data + offset - 5, temp, 5);
+				state = 0;
+			} else {
+				state = 0;
+			}
+		}
+		offset += instr.length;
+	}
+}
+
 static void disasm(unsigned char *data, size_t len, unsigned long vaddr, set<instr_info> &instrs)
 {
 	ZydisDecoder decoder;
@@ -270,6 +323,7 @@ int main(int argc, char **argv)
 		return 1;
 
 	set<instr_info> instrs;
+	rewrite(data, len, vaddr);
 	disasm(data, len, vaddr, instrs);
 
 	vector<unsigned char> patch;
