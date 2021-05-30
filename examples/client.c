@@ -25,7 +25,7 @@ int syscall_hook(struct frame *f)
 			f->nr_ret = -ENOSYS;
 			return 1;
 		}
-	} else if (f->nr_ret == SYS_fork || f->nr_ret == SYS_clone) {
+	} else if (f->nr_ret == SYS_fork || f->nr_ret == SYS_vfork || f->nr_ret == SYS_clone) {
 		static int __thread fork_count = 0;
 		fork_count++;
 		fprintf(stderr, "%s: pid: %d, fork_count: %d\n", f->nr_ret == SYS_fork ? "fork" : "clone", getpid(), fork_count);
@@ -33,6 +33,22 @@ int syscall_hook(struct frame *f)
 			f->nr_ret = -EAGAIN;
 			return 1;
 		}
+	} else if (f->nr_ret == SYS_execve) {
+		char *loader = getenv("HOOK_LOADER");
+		if (loader == NULL)
+			return 0;
+
+		char **argv = (void *) f->args[1];
+		char **argv_last = argv;
+		while (*argv_last) argv_last++;
+		char **new_argv = malloc((argv_last - argv + 2) * sizeof(*argv));
+		memcpy(new_argv + 1, argv, (argv_last - argv + 1) * sizeof(*argv));
+		new_argv[1] = (void *) f->args[0];
+		new_argv[0] = loader;
+
+		f->args[0] = (long) new_argv[0];
+		f->args[1] = (long) new_argv;
+		return 0;
 	} else if (f->nr_ret == SYS_openat) {
 		return common(f, (void *) f->args[1]);
 	} else if (f->nr_ret == SYS_open) {
