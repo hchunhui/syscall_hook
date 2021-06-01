@@ -311,6 +311,10 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		return 1;
 
+	bool workaround = false;
+	if (argc > 3)
+		workaround = true;
+
 	char *file = argv[1];
 	struct stat statbuf;
 	if (stat(file, &statbuf) < 0)
@@ -441,15 +445,33 @@ int main(int argc, char **argv)
 		}
 	}
 
+	auto hdr = (Elf64_Ehdr *) elf;
 	int patch_offset = (statbuf.st_size + PAGESIZE - 1) / PAGESIZE * PAGESIZE;
 	unsigned long patch_vaddr = 0;
-	auto hdr = (Elf64_Ehdr *) elf;
+
 	for (int i = 0; i < hdr->e_phnum; i++) {
 		auto phdr = (Elf64_Phdr *) (elf + hdr->e_phoff) + i;
 		unsigned long a = (phdr->p_vaddr + phdr->p_memsz + PAGESIZE - 1) / PAGESIZE * PAGESIZE;
 		if (a > patch_vaddr) patch_vaddr = a;
 	}
 	printf("got offset 0x%x, vaddr 0x%x\n", patch_offset, patch_vaddr);
+
+	if (workaround) {
+		unsigned long load_vaddr = 0;
+		for (int i = 0; i < hdr->e_phnum; i++) {
+			auto phdr = (Elf64_Phdr *) (elf + hdr->e_phoff) + i;
+			if (phdr->p_type == PT_LOAD) {
+				load_vaddr = phdr->p_vaddr;
+				break;
+			}
+		}
+
+		unsigned long new_offset = patch_vaddr - load_vaddr;
+		if (patch_offset < new_offset) {
+			printf("set patch_offset = 0x%x\n", new_offset);
+			patch_offset = new_offset;
+		}
+	}
 
 	vector<unsigned char> out(elf, elf + statbuf.st_size);
 	int patch_size = (patch.size() + PAGESIZE - 1) / PAGESIZE * PAGESIZE;
