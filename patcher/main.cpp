@@ -271,7 +271,9 @@ static void disasm(unsigned char *data, size_t len, unsigned long vaddr, set<ins
 			instrs.insert({vaddr, offset, prev_room, false, instr.length});
 		}
 
-		if (instr.mnemonic == ZYDIS_MNEMONIC_MOV || instr.mnemonic == ZYDIS_MNEMONIC_XOR ||
+		if (instr.mnemonic == ZYDIS_MNEMONIC_MOV ||
+		    instr.mnemonic == ZYDIS_MNEMONIC_MOVUPS || instr.mnemonic == ZYDIS_MNEMONIC_MOVSXD ||
+		    instr.mnemonic == ZYDIS_MNEMONIC_XOR ||
 		    instr.mnemonic == ZYDIS_MNEMONIC_ADD || instr.mnemonic == ZYDIS_MNEMONIC_SUB ||
 		    instr.mnemonic == ZYDIS_MNEMONIC_OR || instr.mnemonic == ZYDIS_MNEMONIC_AND ||
 		    instr.mnemonic == ZYDIS_MNEMONIC_NOT) {
