@@ -397,7 +397,7 @@ int main(int argc, char **argv)
 				} else {
 					nopq.pop();
 				}
-				if (k.addr - j.addr <= 128) {
+				if (k.addr + 2 - j.addr <= 128) {
 					printf("patch - %08lX\n", k.addr);
 					unsigned long patch_offset = patch.size();
 					emit_hook(patch, comm_addr);
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
 					break;
 				}
 			} else {
-				if (j.addr - k.addr <= 127) {
+				if (j.addr - k.addr - 2 <= 127) {
 					printf("patch + %08lX\n", k.addr);
 					if (j.length > N) {
 						nopq.front().length -= N;
