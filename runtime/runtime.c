@@ -28,6 +28,7 @@ static int wrapper(struct frame *f)
 		} else if ((f->args[0] & CLONE_VM) &&
 			   !(f->args[0] & CLONE_SETTLS)) {
 			f->nr_ret = -EINVAL;
+			reent--;
 			return 1;
 		}
 		break;
