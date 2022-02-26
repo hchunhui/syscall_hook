@@ -19,7 +19,8 @@ unsigned char *elf_read_section(unsigned char *elf, const char *name, unsigned l
 {
 	Elf64_Ehdr *ehdr = (Elf64_Ehdr *) elf;
 	char *strtab = NULL;
-	for (int i = 0; i < ehdr->e_shnum; i++) {
+	int i = ehdr->e_shstrndx;
+	if (i < ehdr->e_shnum) {
 		size_t soff = ehdr->e_shoff + (i * ehdr->e_shentsize);
 		Elf64_Shdr *shdr = (Elf64_Shdr *) (elf + soff);
 		if (shdr->sh_type == SHT_STRTAB) {
