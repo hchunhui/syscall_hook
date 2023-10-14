@@ -127,30 +127,71 @@ static int emit_comm(vector<unsigned char> &patch, int addr_addr)
 
 static void emit_hook(vector<unsigned char> &patch, int comm_addr)
 {
-	// sub    $0x1000,%rsp
+	// test   $0xf, %rsp
+	patch.push_back(0x48); patch.push_back(0xf7); patch.push_back(0xc4);
+	patch.push_back(0x0f); patch.push_back(0x00); patch.push_back(0x00); patch.push_back(0x00);
+	// jne     1b
+	patch.push_back(0x75); patch.push_back(40);
+
+	// sub    $0x0108,%rsp
 	patch.push_back(0x48); patch.push_back(0x81); patch.push_back(0xec);
-	patch.push_back(0x00); patch.push_back(0x10); patch.push_back(0x00); patch.push_back(0x00);
+	patch.push_back(0x08); patch.push_back(0x01); patch.push_back(0x00); patch.push_back(0x00);
 	// mov    %rax,(%rsp)
 	patch.push_back(0x48); patch.push_back(0x89); patch.push_back(0x04); patch.push_back(0x24);
 
 	// callq  comm
-	int pc = patch.size() + 5;
-	int offset = comm_addr - pc;
-	patch.push_back(0xe8);
-	patch.push_back(offset & 0xff);
-	patch.push_back((offset >> 8) & 0xff);
-	patch.push_back((offset >> 16) & 0xff);
-	patch.push_back((offset >> 24) & 0xff);
+	{
+		int pc = patch.size() + 5;
+		int offset = comm_addr - pc;
+		patch.push_back(0xe8);
+		patch.push_back(offset & 0xff);
+		patch.push_back((offset >> 8) & 0xff);
+		patch.push_back((offset >> 16) & 0xff);
+		patch.push_back((offset >> 24) & 0xff);
+	}
 
-	// add    $0x1000,%rsp
+	// add    $0x0108,%rsp
 	patch.push_back(0x48); patch.push_back(0x81); patch.push_back(0xc4);
-	patch.push_back(0x00); patch.push_back(0x10); patch.push_back(0x00); patch.push_back(0x00);
+	patch.push_back(0x08); patch.push_back(0x01); patch.push_back(0x00); patch.push_back(0x00);
 
 	// test   %rax,%rax
 	patch.push_back(0x48); patch.push_back(0x85); patch.push_back(0xc0);
-	// mov    -0x1000(%rsp),%rax
+	// mov    -0x0108(%rsp),%rax
 	patch.push_back(0x48); patch.push_back(0x8b); patch.push_back(0x84); patch.push_back(0x24);
-	patch.push_back(0x00); patch.push_back(0xf0); patch.push_back(0xff); patch.push_back(0xff);
+	patch.push_back(0xf8); patch.push_back(0xfe); patch.push_back(0xff); patch.push_back(0xff);
+	// jne
+	patch.push_back(0x75); patch.push_back(0x02);
+	// syscall
+	patch.push_back(0x0f); patch.push_back(0x05);
+	// jmp
+	patch.push_back(0xeb); patch.push_back(38);
+
+	// sub    $0x0100,%rsp
+	patch.push_back(0x48); patch.push_back(0x81); patch.push_back(0xec);
+	patch.push_back(0x00); patch.push_back(0x01); patch.push_back(0x00); patch.push_back(0x00);
+	// mov    %rax,(%rsp)
+	patch.push_back(0x48); patch.push_back(0x89); patch.push_back(0x04); patch.push_back(0x24);
+
+	// callq  comm
+	{
+		int pc = patch.size() + 5;
+		int offset = comm_addr - pc;
+		patch.push_back(0xe8);
+		patch.push_back(offset & 0xff);
+		patch.push_back((offset >> 8) & 0xff);
+		patch.push_back((offset >> 16) & 0xff);
+		patch.push_back((offset >> 24) & 0xff);
+	}
+
+	// add    $0x0100,%rsp
+	patch.push_back(0x48); patch.push_back(0x81); patch.push_back(0xc4);
+	patch.push_back(0x00); patch.push_back(0x01); patch.push_back(0x00); patch.push_back(0x00);
+
+	// test   %rax,%rax
+	patch.push_back(0x48); patch.push_back(0x85); patch.push_back(0xc0);
+	// mov    -0x0100(%rsp),%rax
+	patch.push_back(0x48); patch.push_back(0x8b); patch.push_back(0x84); patch.push_back(0x24);
+	patch.push_back(0x00); patch.push_back(0xff); patch.push_back(0xff); patch.push_back(0xff);
 	// jne
 	patch.push_back(0x75); patch.push_back(0x02);
 	// syscall
